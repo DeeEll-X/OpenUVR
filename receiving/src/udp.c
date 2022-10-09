@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 // for memset
@@ -95,12 +96,17 @@ static int udp_initialize(struct ouvr_ctx *ctx)
     fcntl(c->fd, F_SETFL, flags | (int)O_NONBLOCK);
     srand(17); 
     c->msg.msg_iov = c->iov;
+#ifdef TIME_NETWORK
+    c->msg.msg_iovlen = 3;
+#elif
     c->msg.msg_iovlen = 2;
+#endif
     return 0;
 }
 
 #ifdef TIME_NETWORK
     static float avg_time = 0;
+    static float avg_transfer_time = 0;
 #endif
 
 static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
@@ -119,6 +125,12 @@ static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     c->iov[0].iov_len = sizeof(expected_size);
     c->iov[0].iov_base = &expected_size;
     c->iov[1].iov_len = RECV_SIZE;
+
+#ifdef TIME_NETWORK
+    struct timeval sending_tv;
+    c->iov[2].iov_len = sizeof(sending_tv);
+    c->iov[2].iov_base = &sending_tv;
+#endif
     while (offset < expected_size)
     {
         c->iov[1].iov_base = start_pos + offset;
@@ -155,6 +167,10 @@ static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
         }
     }
 #ifdef TIME_NETWORK
+    long transfered = start_time.tv_usec - sending_tv.tv_usec + (start_time.tv_sec - sending_tv.tv_sec) * 1000000;
+    avg_transfer_time = 0.998 * avg_transfer_time + 0.002 * transfered;
+    printf("\rtransfer avg: %f, transfered: %ld", avg_transfer_time, transfered);
+
     gettimeofday(&end_time, NULL);
     long elapsed = end_time.tv_usec - start_time.tv_usec + (end_time.tv_sec > start_time.tv_sec ? 1000000 : 0);
     avg_time = 0.998 * avg_time + 0.002 * elapsed;

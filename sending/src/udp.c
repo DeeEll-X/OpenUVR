@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 // for memset
@@ -66,7 +67,11 @@ static int udp_initialize(struct ouvr_ctx *ctx)
     fcntl(c->fd, F_SETFL, flags | (int)O_NONBLOCK);
 
     c->msg.msg_iov = c->iov;
+#ifdef TIME_NETWORK
+    c->msg.msg_iovlen = 3;
+#elif
     c->msg.msg_iovlen = 2;
+#endif
     return 0;
 }
 
@@ -79,6 +84,12 @@ static int udp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     c->iov[0].iov_len = sizeof(pkt->size);
     c->iov[0].iov_base = &(pkt->size);
     c->iov[1].iov_len = SEND_SIZE;
+#ifdef TIME_NETWORK
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    c->iov[2].iov_len = sizeof(tv);
+    c->iov[2].iov_base = &tv;
+#endif
     while (offset < pkt->size)
     {
         c->iov[1].iov_base = start_pos + offset;
