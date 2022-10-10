@@ -61,6 +61,12 @@ typedef struct udp_net_context
     struct iovec iov[3];
 } udp_net_context;
 
+typedef struct timevalue
+{
+    int32_t sec;
+    int32_t usec;
+} timevalue;
+
 static int udp_initialize(struct ouvr_ctx *ctx)
 {
     if (ctx->net_priv != NULL)
@@ -96,11 +102,7 @@ static int udp_initialize(struct ouvr_ctx *ctx)
     fcntl(c->fd, F_SETFL, flags | (int)O_NONBLOCK);
     srand(17); 
     c->msg.msg_iov = c->iov;
-#ifdef TIME_NETWORK
     c->msg.msg_iovlen = 3;
-#elif
-    c->msg.msg_iovlen = 2;
-#endif
     return 0;
 }
 
@@ -121,19 +123,16 @@ static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     int offset = 0;
     int expected_size = 1;
     struct timespec time_of_last_receive = {.tv_sec = 0}, time_temp;
+    struct timevalue send_time;
     pkt->size = 0;
     c->iov[0].iov_len = sizeof(expected_size);
     c->iov[0].iov_base = &expected_size;
-    c->iov[1].iov_len = RECV_SIZE;
-
-#ifdef TIME_NETWORK
-    struct timeval sending_tv;
-    c->iov[2].iov_len = sizeof(sending_tv);
-    c->iov[2].iov_base = &sending_tv;
-#endif
+    c->iov[1].iov_len = sizeof(send_time);
+    c->iov[1].iov_base = &send_time;
+    c->iov[2].iov_len = RECV_SIZE;
     while (offset < expected_size)
     {
-        c->iov[1].iov_base = start_pos + offset;
+        c->iov[2].iov_base = start_pos + offset;
         r = recvmsg(c->fd, &c->msg, 0);
 	if (r < -1)
         {
@@ -148,9 +147,9 @@ static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
                 has_received_first = 1;
             }
 #endif
-            //printf("%d\n",expected_size);
-            offset += r - sizeof(expected_size);
-            pkt->size += r - sizeof(expected_size);
+            // printf("%d, %d, %d, %d\n",r, sizeof(expected_size) ,sizeof(send_time), r - sizeof(expected_size) - sizeof(send_time));
+            offset += r - sizeof(expected_size) - sizeof(send_time);
+            pkt->size += r - sizeof(expected_size) - sizeof(send_time);
             clock_gettime(CLOCK_MONOTONIC, &time_of_last_receive);
         }
         else
@@ -167,14 +166,14 @@ static int udp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
         }
     }
 #ifdef TIME_NETWORK
-    long transfered = start_time.tv_usec - sending_tv.tv_usec + (start_time.tv_sec - sending_tv.tv_sec) * 1000000;
-    avg_transfer_time = 0.998 * avg_transfer_time + 0.002 * transfered;
-    printf("\rtransfer avg: %f, transfered: %ld", avg_transfer_time, transfered);
-
     gettimeofday(&end_time, NULL);
     long elapsed = end_time.tv_usec - start_time.tv_usec + (end_time.tv_sec > start_time.tv_sec ? 1000000 : 0);
     avg_time = 0.998 * avg_time + 0.002 * elapsed;
-    printf("\rnet avg: %f,  elapsed: %ld", avg_time, elapsed);
+    printf("\rnet avg: %f,  elapsed: %ld\n", avg_time, elapsed);
+
+    long transfered = end_time.tv_usec - send_time.usec + (end_time.tv_sec - send_time.sec) * 1000000;
+    avg_transfer_time = 0.998 * avg_transfer_time + 0.002 * transfered;
+    printf("\rtotal transfer avg: %f, transfered: %ld\n", avg_transfer_time, transfered);
 #endif
     if(!(rand() % 60) && 0) {
 	    printf("dropped\n");

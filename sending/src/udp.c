@@ -30,6 +30,12 @@ typedef struct udp_net_context
     struct iovec iov[3];
 } udp_net_context;
 
+typedef struct timevalue
+{
+    int32_t sec;
+    int32_t usec;
+} timevalue;
+
 static int udp_initialize(struct ouvr_ctx *ctx)
 {
     if (ctx->net_priv != NULL)
@@ -67,11 +73,7 @@ static int udp_initialize(struct ouvr_ctx *ctx)
     fcntl(c->fd, F_SETFL, flags | (int)O_NONBLOCK);
 
     c->msg.msg_iov = c->iov;
-#ifdef TIME_NETWORK
     c->msg.msg_iovlen = 3;
-#elif
-    c->msg.msg_iovlen = 2;
-#endif
     return 0;
 }
 
@@ -81,18 +83,21 @@ static int udp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     register ssize_t r;
     uint8_t *start_pos = pkt->data;
     int offset = 0;
+    struct timeval tv;
+    struct timevalue sending_tv;
+    gettimeofday(&tv, NULL);
+    sending_tv.sec = tv.tv_sec;
+    sending_tv.usec = tv.tv_usec;
+    uint64_t curtime = tv.tv_sec * 1000000 + tv.tv_usec;
+    
     c->iov[0].iov_len = sizeof(pkt->size);
     c->iov[0].iov_base = &(pkt->size);
-    c->iov[1].iov_len = SEND_SIZE;
-#ifdef TIME_NETWORK
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    c->iov[2].iov_len = sizeof(tv);
-    c->iov[2].iov_base = &tv;
-#endif
+    c->iov[1].iov_len = sizeof(sending_tv);
+    c->iov[1].iov_base = &sending_tv;
+    c->iov[2].iov_len = SEND_SIZE;
     while (offset < pkt->size)
     {
-        c->iov[1].iov_base = start_pos + offset;
+        c->iov[2].iov_base = start_pos + offset;
         r = sendmsg(c->fd, &c->msg, 0);
         if (r < -1)
         {
@@ -101,13 +106,15 @@ static int udp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
         }
         else if (r > 0)
         {
-            offset += c->iov[1].iov_len;
+            offset += c->iov[2].iov_len;
             if (offset + SEND_SIZE > pkt->size)
             {
-                c->iov[1].iov_len = pkt->size - offset;
+                c->iov[2].iov_len = pkt->size - offset;
+                // PRINT_ERR("%d\n", r-sizeof(pkt->size)-sizeof(tv));
             }
         }
     }
+    // PRINT_ERR("%d\n",pkt->size);
     return 0;
 }
 
