@@ -92,6 +92,10 @@ static int tcp_initialize(struct ouvr_ctx *ctx)
     return 0;
 }
 
+#ifdef TIME_NETWORK
+    static float avg_transfer_time = 0;
+#endif
+
 static int tcp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
 {
 #ifdef TIME_NETWORK
@@ -99,6 +103,8 @@ static int tcp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     int has_received_first = 0;
 #endif
     tcp_net_context *c = ctx->net_priv;
+
+    struct timevalue sending_tv;
 
     register int r;
     unsigned char *pos = pkt->data;
@@ -109,6 +115,12 @@ static int tcp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
         return -1;
     }
     pkt->size = nleft;
+
+    r = read(c->fd, &sending_tv, sizeof(sending_tv));
+    if(r != sizeof(sending_tv)){
+        printf("Error reading sending time: %d\n", r);
+        return -1;
+    }
 
 #ifdef TIME_NETWORK
     gettimeofday(&start_time, NULL);
@@ -131,7 +143,12 @@ static int tcp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
 
 #ifdef TIME_NETWORK
     gettimeofday(&end_time, NULL);
-    printf("%ld\n", end_time.tv_usec - start_time.tv_usec + (end_time.tv_sec - start_time.tv_sec)* 1000000);
+    printf("elapsed: %ld\n", end_time.tv_usec - start_time.tv_usec + (end_time.tv_sec - start_time.tv_sec)* 1000000);
+
+    long transfered = end_time.tv_usec - sending_tv.usec + (end_time.tv_sec - sending_tv.sec) * 1000000;
+    avg_transfer_time = 0.998 * avg_transfer_time + 0.002 * transfered;
+    printf("sendtime: sec: %ld, usec: %ld, endtime: sec: %ld, usec: %ld\n", sending_tv.sec, sending_tv.usec, end_time.tv_sec, end_time.tv_usec);
+    printf("\rtotal transfer avg: %f, transfered: %ld\n", avg_transfer_time, transfered);
 #endif
 
     return 0;

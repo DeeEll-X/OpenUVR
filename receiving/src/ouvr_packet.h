@@ -41,6 +41,14 @@ struct ouvr_ctx;
 #define SERVER_IP "192.168.1.2"
 #define CLIENT_IP "192.168.1.3"
 
+#include <stdint.h>
+
+typedef struct timevalue
+{
+    int32_t sec;
+    int32_t usec;
+} timevalue;
+
 struct ouvr_packet
 {
     unsigned char *data;

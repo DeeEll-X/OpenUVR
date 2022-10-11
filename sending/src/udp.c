@@ -30,11 +30,6 @@ typedef struct udp_net_context
     struct iovec iov[3];
 } udp_net_context;
 
-typedef struct timevalue
-{
-    int32_t sec;
-    int32_t usec;
-} timevalue;
 
 static int udp_initialize(struct ouvr_ctx *ctx)
 {
@@ -88,7 +83,6 @@ static int udp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     gettimeofday(&tv, NULL);
     sending_tv.sec = tv.tv_sec;
     sending_tv.usec = tv.tv_usec;
-    uint64_t curtime = tv.tv_sec * 1000000 + tv.tv_usec;
     
     c->iov[0].iov_len = sizeof(pkt->size);
     c->iov[0].iov_base = &(pkt->size);

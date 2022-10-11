@@ -61,11 +61,6 @@ typedef struct udp_net_context
     struct iovec iov[3];
 } udp_net_context;
 
-typedef struct timevalue
-{
-    int32_t sec;
-    int32_t usec;
-} timevalue;
 
 static int udp_initialize(struct ouvr_ctx *ctx)
 {

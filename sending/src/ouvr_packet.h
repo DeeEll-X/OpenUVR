@@ -40,7 +40,10 @@ struct ouvr_ctx;
 // #define SERVER_IP "172.16.38.214"
 // #define CLIENT_IP "172.16.44.23"
 
-#define SERVER_IP "192.168.1.2"
+#define SERVER_IP "10.0.0.247"
+#define CLIENT_IP "10.0.0.250" // raspi eth0
+// #define CLIENT_IP "10.0.1.32" //raspi wlan0
+// #define SERVER_IP "192.168.1.2"
 //#define CLIENT_IP "192.168.1.3"
 
 #include <stdio.h>
@@ -48,8 +51,13 @@ struct ouvr_ctx;
 
 #define PRINT_ERR(format, ...) fprintf(stderr, "\33[31;4mOpenUVR Error:%s:%d:\033[24m " format "\033[0m", __FILE__, __LINE__, ##__VA_ARGS__)
 
-char CLIENT_IP[20];
+// char CLIENT_IP[20];
 
+typedef struct timevalue
+{
+    int32_t sec;
+    int32_t usec;
+} timevalue;
 
 struct ouvr_packet
 {

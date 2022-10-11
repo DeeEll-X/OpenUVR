@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 // for memset
@@ -92,6 +93,9 @@ static int tcp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
 {
     tcp_net_context *c = ctx->net_priv;
 
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
     register int r;
 
     if (c->send_fd == -1)
@@ -111,6 +115,18 @@ static int tcp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
         return 0;
     }
 
+    struct timevalue sending_tv;
+    sending_tv.sec = tv.tv_sec;
+    sending_tv.usec = tv.tv_usec;
+    r = write(c->send_fd, &sending_tv, sizeof(sending_tv));
+    if (r != sizeof(sending_tv))
+    {
+        PRINT_ERR("Error on writing sending time: returned %d\n", r);
+        close(c->send_fd);
+        c->send_fd = -1;
+        return 0;
+    }
+    
     uint8_t *pos = pkt->data;
     while (nleft > 0)
     {
