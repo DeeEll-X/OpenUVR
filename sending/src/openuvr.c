@@ -140,6 +140,9 @@ err:
 #ifdef TIME_ENCODING
 float avg_enc_time = 0;
 #endif
+#ifdef TIME_NETWORK
+float avg_send_time = 0;
+#endif
 
 int openuvr_send_frame(struct openuvr_context *context)
 {
@@ -181,7 +184,7 @@ int openuvr_send_frame(struct openuvr_context *context)
     gettimeofday(&end, NULL);
     int elapsed = end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0);
     avg_enc_time = 0.998 * avg_enc_time + 0.002 * elapsed;
-    fprintf(stderr, "\r\033[60Cenc avg: %f, actual: %d    ", avg_enc_time, elapsed);
+    fprintf(stderr, "enc avg: %f, actual: %d\n", avg_enc_time, elapsed);
     fflush(stdout);
 #endif
 
@@ -195,7 +198,9 @@ int openuvr_send_frame(struct openuvr_context *context)
     }
 #ifdef TIME_NETWORK
     gettimeofday(&end, NULL);
-    fprintf(stderr, "%d\n", end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0));
+    int elapsed = end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0);
+    avg_send_time = 0.998 * avg_send_time + 0.002 * elapsed;
+    fprintf(stderr, "send avg: %f, actual: %d\n", avg_send_time, elapsed);
 #endif
 
     return 0;
