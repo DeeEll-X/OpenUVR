@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 // for memset
@@ -107,25 +108,46 @@ static int tcp_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     struct timevalue sending_tv;
 
     register int r;
-    unsigned char *pos = pkt->data;
+    unsigned char *pos;
     int nleft = 0;
-    r = read(c->fd, &nleft, sizeof(nleft));
-    if(r != sizeof(nleft)) {
-        printf("Error reading nleft: %d\n", r);
-        return -1;
+    int size;
+
+    size = sizeof(nleft);
+    pos = &nleft;
+    while(size > 0)
+    {
+        r = read(c->fd, pos, size);
+        if (r < 0){
+            printf("reading nleft error: %d, errno: %d\n", r, errno);
+            return -1;
+        }
+        else if (r > 0){
+            pos += r;
+            size -= r;
+        }
     }
     pkt->size = nleft;
 
-    r = read(c->fd, &sending_tv, sizeof(sending_tv));
-    if(r != sizeof(sending_tv)){
-        printf("Error reading sending time: %d\n", r);
-        return -1;
+    size = sizeof(sending_tv);
+    pos = &sending_tv;
+    while ((size > 0))
+    {
+        r = read(c->fd, pos, size);
+        if(r < 0){
+            printf("reading sending time error: %d, errno: %d\n", r, errno);
+            return -1;
+        }
+        else if(r > 0){
+            pos += r;
+            size -= r;
+        }
     }
 
 #ifdef TIME_NETWORK
     gettimeofday(&start_time, NULL);
 #endif
 
+    pos = pkt->data;
     while (nleft > 0)
     {
         r = read(c->fd, pos, nleft);
