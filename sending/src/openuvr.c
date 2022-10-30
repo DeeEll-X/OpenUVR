@@ -38,6 +38,7 @@
 #include "raw.h"
 #include "raw_ring.h"
 #include "udp_compat.h"
+#include "webrtc.h"
 #include "inject.h"
 #include "ffmpeg_encode.h"
 #include "ffmpeg_cuda_encode.h"
@@ -82,6 +83,8 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_ENCODER_TYPE enc_type
     case OPENUVR_NETWORK_UDP_COMPAT:
         ctx->net = &udp_compat_handler;
         break;
+    case OPENUVR_NETWORK_WEBRTC:
+        ctx->net = &webrtc_handler;
     case OPENUVR_NETWORK_UDP:
     default:
         ctx->net = &udp_handler;
@@ -146,6 +149,9 @@ float avg_send_time = 0;
 
 int openuvr_send_frame(struct openuvr_context *context)
 {
+#ifdef UE4DEBUG
+    // PRINT_ERR("openuvr_send_frame entered\n");
+#endif
     int ret;
     struct ouvr_ctx *ctx = context->priv;
 #if defined(TIME_ENCODING) || defined(TIME_NETWORK)
@@ -174,31 +180,49 @@ int openuvr_send_frame(struct openuvr_context *context)
 #endif
     do
     {
+#ifdef UE4DEBUG
+        // PRINT_ERR("before process_frame\n");
+#endif
         ret = ctx->enc->process_frame(ctx, ctx->packet);
     } while (ret == 0);
+#ifdef UE4DEBUG
+    // PRINT_ERR("process_frame break while\n");
+#endif
     if (ret < 0)
     {
+#ifdef UE4DEBUG
+        PRINT_ERR("process_frame ret %d\n", ret);
+#endif
         return -1;
     }
+    // PRINT_ERR("print encoding time\n");
 #ifdef TIME_ENCODING
     gettimeofday(&end, NULL);
     int elapsed = end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0);
     avg_enc_time = 0.998 * avg_enc_time + 0.002 * elapsed;
-    fprintf(stderr, "enc avg: %f, actual: %d\n", avg_enc_time, elapsed);
+    PRINT_ERR("enc avg: %f, actual: %d\n", avg_enc_time, elapsed);
+    // fprintf(stderr, "enc avg: %f, actual: %d\n", avg_enc_time, elapsed);
     fflush(stdout);
 #endif
 
 #ifdef TIME_NETWORK
     gettimeofday(&start, NULL);
 #endif
+#ifdef UE4DEBUG
+    // PRINT_ERR("before send_packet\n");
+#endif
     ret = ctx->net->send_packet(ctx, ctx->packet);
     if (ret < 0)
     {
+#ifdef UE4DEBUG
+    PRINT_ERR("send_packet return %d\n",ret);
+#endif
         return -1;
     }
+    // PRINT_ERR("print network stack time\n");
 #ifdef TIME_NETWORK
     gettimeofday(&end, NULL);
-    int elapsed = end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0);
+    elapsed = end.tv_usec - start.tv_usec + (end.tv_sec - start.tv_sec) * 1000000 ;
     avg_send_time = 0.998 * avg_send_time + 0.002 * elapsed;
     fprintf(stderr, "send avg: %f, actual: %d\n", avg_send_time, elapsed);
 #endif
@@ -238,6 +262,9 @@ void *send_loop_continuous(void *arg)
         } while (quot == prev_quot);
         prev_quot = quot;
 
+#ifdef UE4DEBUG
+        // PRINT_ERR("before openuvr_send_frame(context)\n");
+#endif
         if (openuvr_send_frame(context) != 0)
         {
             pth_ctx->should_exit = 1;

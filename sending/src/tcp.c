@@ -91,6 +91,7 @@ static int tcp_initialize(struct ouvr_ctx *ctx)
 
 static int tcp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
 {
+    PRINT_ERR("tcp_send_packet enter\n");
     tcp_net_context *c = ctx->net_priv;
 
     struct timeval tv;
@@ -107,6 +108,7 @@ static int tcp_send_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
 
     int nleft = pkt->size;
     r = write(c->send_fd, &nleft, sizeof(nleft));
+    PRINT_ERR("pkt len = %d\n", nleft);
     if (r != sizeof(nleft))
     {
         PRINT_ERR("Error on writing num left: returned %d\n", r);

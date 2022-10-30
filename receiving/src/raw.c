@@ -53,7 +53,7 @@ typedef struct raw_net_context
     unsigned char eth_header[14];
     int fd;
     struct msghdr msg;
-    struct iovec iov[3];
+    struct iovec iov[4];
 } raw_net_context;
 
 unsigned char const global_eth_header[14] = {0x9c, 0xda, 0x3e, 0xa3, 0xd8, 0x29, 0xb8, 0x27, 0xeb, 0xce, 0x97, 0x68, 0x88, 0xb5};
@@ -81,12 +81,13 @@ static int raw_initialize(struct ouvr_ctx *ctx)
     c->iov[0].iov_len = sizeof(c->eth_header);
     srand(17); 
     c->msg.msg_iov = c->iov;
-    c->msg.msg_iovlen = 3;
+    c->msg.msg_iovlen = 4;
     return 0;
 }
 
 #ifdef TIME_NETWORK
     static float avg_time = 0;
+    static float avg_transfer_time = 0;
 #endif
 
 static int raw_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
@@ -101,13 +102,16 @@ static int raw_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     int offset = 0;
     int expected_size = 1;
     struct timespec time_of_last_receive = {.tv_sec = 0}, time_temp;
+    struct timevalue sending_tv;
     pkt->size = 0;
     c->iov[1].iov_len = sizeof(expected_size);
     c->iov[1].iov_base = &expected_size;
-    c->iov[2].iov_len = RECV_SIZE;
+    c->iov[2].iov_len = sizeof(sending_tv);
+    c->iov[2].iov_base = &sending_tv;
+    c->iov[3].iov_len = RECV_SIZE;
     while (offset < expected_size)
     {
-        c->iov[2].iov_base = start_pos + offset;
+        c->iov[3].iov_base = start_pos + offset;
         r = recvmsg(c->fd, &c->msg, 0);
         if (r < -1)
         {
@@ -122,8 +126,8 @@ static int raw_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
                 has_received_first = 1;
             }
 #endif
-            offset += r - (sizeof(c->eth_header) + sizeof(expected_size));
-            pkt->size += r - (sizeof(c->eth_header) + sizeof(expected_size));
+            offset += r - (sizeof(c->eth_header) + sizeof(expected_size) + sizeof(sending_tv));
+            pkt->size += r - (sizeof(c->eth_header) + sizeof(expected_size) + sizeof(sending_tv));
             clock_gettime(CLOCK_MONOTONIC, &time_of_last_receive);
         }
         else
@@ -145,6 +149,11 @@ static int raw_receive_packet(struct ouvr_ctx *ctx, struct ouvr_packet *pkt)
     long elapsed = end_time.tv_usec - start_time.tv_usec + (end_time.tv_sec > start_time.tv_sec ? 1000000 : 0);
     avg_time = 0.998 * avg_time + 0.002 * elapsed;
     printf("\rnet avg: %f,  elapsed: %ld", avg_time, elapsed);
+
+    long transfered = end_time.tv_usec - sending_tv.usec + (end_time.tv_sec - sending_tv.sec) * 1000000;
+    avg_transfer_time = 0.998 * avg_transfer_time + 0.002 * transfered;
+    printf("sendtime: sec: %d, usec: %d, endtime: sec: %ld, usec: %ld\n", sending_tv.sec, sending_tv.usec, end_time.tv_sec, end_time.tv_usec);
+    printf("\rtotal transfer avg: %f, transfered: %ld\n", avg_transfer_time, transfered);
 #endif
 #if 0
     if(!(rand() % 120)){
@@ -172,15 +181,18 @@ int raw_receive_and_decode(struct ouvr_ctx *ctx)
     int total_received = 0;
     int expected_size = 1;
     struct timespec time_of_last_receive = {.tv_sec = 0}, time_temp;
+    struct timevalue sending_tv;
     c->iov[1].iov_len = sizeof(expected_size);
     c->iov[1].iov_base = &expected_size;
-    c->iov[2].iov_len = RECV_SIZE;
+    c->iov[2].iov_len = sizeof(sending_tv);
+    c->iov[2].iov_base = &sending_tv;
+    c->iov[3].iov_len = RECV_SIZE;
 
     int buf_idx = 0;
     int buf_offset = 0;
     int max_buf_size = bufs[buf_idx]->nAllocLen - RECV_SIZE;
     while(total_received < expected_size) {
-        c->iov[2].iov_base = bufs[buf_idx]->pBuffer + buf_offset;
+        c->iov[3].iov_base = bufs[buf_idx]->pBuffer + buf_offset;
         r = recvmsg(c->fd, &c->msg, 0);
         if (r < -1)
         {
@@ -189,7 +201,7 @@ int raw_receive_and_decode(struct ouvr_ctx *ctx)
         }
         else if (r > 0)
         {
-            int to_add = r - (sizeof(c->eth_header) + sizeof(expected_size));
+            int to_add = r - (sizeof(c->eth_header) + sizeof(expected_size) + sizeof(sending_tv));
             buf_offset += to_add;
             total_received += to_add;
             clock_gettime(CLOCK_MONOTONIC, &time_of_last_receive);

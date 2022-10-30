@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <GLES3/gl3.h>
 #include <dlfcn.h>
+#include <sys/time.h>
 
 #include "ssim_plugin.h"
 
@@ -68,6 +69,9 @@ struct openuvr_context *ctx = NULL;
 
 int openuvr_managed_init(enum OPENUVR_ENCODER_TYPE enc_type, enum OPENUVR_NETWORK_TYPE net_type)
 {
+#ifdef UE4DEBUG
+    PRINT_ERR("openuvr_managed_init entering\n");
+#endif
     GLint dims[4] = {0};
     glGetIntegerv(GL_VIEWPORT, dims);
     GLint w = dims[2];
@@ -94,13 +98,22 @@ int openuvr_managed_init(enum OPENUVR_ENCODER_TYPE enc_type, enum OPENUVR_NETWOR
 
     GLint size = 0;
     glGetBufferParameteriv(GL_PIXEL_PACK_BUFFER, GL_BUFFER_SIZE, &size);
+#ifdef UE4DEBUG
+    // PRINT_ERR("openuvr_alloc_context entering\n");
+#endif
     ctx = openuvr_alloc_context(enc_type, net_type, cpu_encoding_buf, pbo);
+#ifdef UE4DEBUG
+    PRINT_ERR("openuvr_alloc_context finished\n");
+#endif
     if (ctx == NULL)
     {
         PRINT_ERR("Couldn't allocate openuvr context\n");
         return -1;
     }
     openuvr_cuda_copy(ctx);
+#ifdef UE4DEBUG
+    PRINT_ERR("openuvr_cuda_copy finished\n");
+#endif
 
 //To enable SSIM measurement, compile with "make MODE_MEASURE_SSIM=1"
 #ifdef MEASURE_SSIM
@@ -119,12 +132,21 @@ int openuvr_managed_init(enum OPENUVR_ENCODER_TYPE enc_type, enum OPENUVR_NETWOR
 #else
     openuvr_init_thread_continuous(ctx);
 #endif
-
+#ifdef UE4DEBUG
+    PRINT_ERR("openuvr_managed_init finished\n");
+#endif
     return 0;
 }
 
+#ifdef TIME_COPY
+float avg_copy_time = 0;
+#endif
 void openuvr_managed_copy_framebuffer()
 {
+#ifdef TIME_COPY
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+#endif
     GLuint bound_pbo;
     glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, (GLint *)&bound_pbo);
     if (pbo != 0)
@@ -207,4 +229,12 @@ void openuvr_managed_copy_framebuffer()
         }
 #endif
     }
+#ifdef TIME_COPY
+    gettimeofday(&end, NULL);
+    int elapsed = end.tv_usec - start.tv_usec + (end.tv_sec > start.tv_sec ? 1000000 : 0);
+    avg_copy_time = 0.998 * avg_copy_time + 0.002 * elapsed;
+    // PRINT_ERR("enc avg: %f, actual: %d\n", avg_enc_time, elapsed);
+    fprintf(stderr, "enc copy: %f, actual: %d\n", avg_copy_time, elapsed);
+    fflush(stdout);
+#endif
 }

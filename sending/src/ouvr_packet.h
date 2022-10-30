@@ -41,8 +41,8 @@ struct ouvr_ctx;
 // #define CLIENT_IP "172.16.44.23"
 
 #define SERVER_IP "10.0.0.247"
-#define CLIENT_IP "10.0.0.250" // raspi eth0
-// #define CLIENT_IP "10.0.1.32" //raspi wlan0
+// #define CLIENT_IP "10.0.0.250" // raspi eth0
+#define CLIENT_IP "10.0.1.32" //raspi wlan0
 // #define SERVER_IP "192.168.1.2"
 //#define CLIENT_IP "192.168.1.3"
 
