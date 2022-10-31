@@ -31,6 +31,10 @@
 CFLAGS=-std=c11 -Wall -Wextra -D_GNU_SOURCE=1 -O3 -I/opt/vc/include $(TIME_FLAGS)
 CC=gcc
 
+ifdef UE4DEBUG
+CFLAGS+= -DUE4DEBUG
+endif
+
 OBJS=openuvr.o tcp.o udp.o udp_compat.o raw.o ouvr_packet.o openmax_render.o rgb_render.o openmax_audio.o ffmpeg_audio.o feedback_net.o input_send.o
 
 .PHONY: all

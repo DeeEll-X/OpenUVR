@@ -76,7 +76,13 @@ int main(int argc, char **argv) {
 
     context = openuvr_alloc_context(enc_choice, net_choice);
 
+#ifdef UE4DEBUG
+    printf("context returned\n");
+#endif
     if(context == NULL) {
+#ifdef UE4DEBUG
+        printf("contect returned = NULL\n");
+#endif
         usage();
         return 1;
     }
@@ -85,11 +91,16 @@ int main(int argc, char **argv) {
     int curr_sec = 0;
     struct timeval tv;
     
+#ifdef UE4DEBUG
+    printf("start receiving frames\n");
+#endif
     while(1){
         if(openuvr_receive_frame(context) != 0)
         {
             return 1;
         }
+#ifdef UE4DEBUG
+#endif
         gettimeofday(&tv, NULL);
         if(tv.tv_sec != curr_sec)
         {

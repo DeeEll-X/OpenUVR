@@ -101,15 +101,24 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_DECODER_TYPE dec_type
     }
     if (ctx->dec->init(ctx) != 0)
     {
+#ifdef UE4DEBUG
+    printf("decoder init failed\n");
+#endif
         goto err;
     }
 
     ctx->aud = &openmax_audio;
     if (ctx->aud->init(ctx) != 0)
     {
+#ifdef UE4DEBUG
+    printf("audio init failed\n");
+#endif
         goto err;
     }
 
+#ifdef UE4DEBUG
+    printf("decoder and audio inited\n");
+#endif
     //TODO: make packets only hold one again, multiple was necessary for multithreaded receiving/decoding, but such operation didn't work very well
     ctx->packets = calloc(sizeof(struct ouvr_packet *), NUM_PACKETS);
     for(int i = 0; i < NUM_PACKETS; i++)
@@ -122,9 +131,15 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_DECODER_TYPE dec_type
     
     if(feedback_initialize(ctx) != 0)
     {
+#ifdef UE4DEBUG
+    printf("feedback init failed\n");
+#endif
         goto err;
     }
 
+#ifdef UE4DEBUG
+    printf("feedback inited\n");
+#endif
     ret->priv = ctx;
     return ret;
 
@@ -150,17 +165,30 @@ int openuvr_receive_frame(struct openuvr_context *context)
     struct ouvr_packet *pkt = ctx->packets[0];
     if (ctx->net->recv_packet(ctx, pkt) != 0)
     {
+        printf("recv_packet failed\n");
         return -1;
     }
     if (pkt->size == 4096)
     {
+#ifdef UE4DEBUG
+    // printf("received packet size = 4096, entering audio->process_frame\n");
+#endif
         if(ctx->aud->process_frame(ctx, pkt) != 0)
         {
+#ifdef UE4DEBUG
+    printf("audio->process_frame failed\n");
+#endif
             return -1;
         }
     } else {
+#ifdef UE4DEBUG
+    printf("received packet size != 4096, entering decoder->process_frame\n");
+#endif
         if (pkt->size && ctx->dec->process_frame(ctx, pkt) != 0)
         {
+#ifdef UE4DEBUG
+    printf("decoder->process_frame failed\n");
+#endif
             return -1;
         }
         feedback_send(ctx);
