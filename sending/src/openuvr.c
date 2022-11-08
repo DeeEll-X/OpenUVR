@@ -41,7 +41,6 @@
 #include "webrtc.h"
 #include "inject.h"
 #include "ffmpeg_encode.h"
-#include "ffmpeg_cuda_encode.h"
 #include "rgb_encode.h"
 #include "pulse_audio.h"
 #include "feedback_net.h"
@@ -85,6 +84,7 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_ENCODER_TYPE enc_type
         break;
     case OPENUVR_NETWORK_WEBRTC:
         ctx->net = &webrtc_handler;
+        break;
     case OPENUVR_NETWORK_UDP:
     default:
         ctx->net = &udp_handler;
@@ -104,9 +104,6 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_ENCODER_TYPE enc_type
     {
     case OPENUVR_ENCODER_RGB:
         ctx->enc = &rgb_encode;
-        break;
-    case OPENUVR_ENCODER_H264_CUDA:
-        ctx->enc = &ffmpeg_cuda_encode;
         break;
     case OPENUVR_ENCODER_H264:
     default:
