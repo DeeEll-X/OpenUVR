@@ -28,20 +28,20 @@
 # Hung-Wei Tseng
 #
 
-CFLAGS=-std=c11 -Wall -Wextra -D_GNU_SOURCE=1 -O3 -I/opt/vc/include $(TIME_FLAGS)
+CFLAGS=-std=c11 -Wall -Wextra -D_GNU_SOURCE=1 -O3 -I/opt/vc/include $(TIME_FLAGS) -L/usr/local/lib
 CC=gcc
 
 ifdef UE4DEBUG
 CFLAGS+= -DUE4DEBUG
 endif
 
-OBJS=openuvr.o tcp.o udp.o udp_compat.o raw.o ouvr_packet.o openmax_render.o rgb_render.o openmax_audio.o ffmpeg_audio.o feedback_net.o input_send.o
+OBJS=openuvr.o tcp.o udp.o udp_compat.o raw.o webrtc.o ouvr_packet.o openmax_render.o rgb_render.o openmax_audio.o ffmpeg_audio.o feedback_net.o input_send.o
 
 .PHONY: all
 all: openuvr
 
 openuvr: main.o $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -L/opt/vc/lib -lavcodec /usr/local/lib/libavutil.so -lopenmaxil -lbcm_host -lpthread
+	$(CC) $(CFLAGS) -o $@ $^ -L/opt/vc/lib -lavcodec /usr/local/lib/libavutil.so -lopenmaxil -lbcm_host -lpthread -ldatachannel
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

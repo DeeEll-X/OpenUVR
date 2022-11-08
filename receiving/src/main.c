@@ -68,6 +68,9 @@ int main(int argc, char **argv) {
     else if(!strcmp("raw", argv[2])) {
         net_choice = OPENUVR_NETWORK_RAW;
     }
+    else if(!strcmp("webrtc", argv[2])) {
+        net_choice = OPENUVR_NETWORK_WEBRTC;
+    }
 
     if(net_choice == -1 || enc_choice == -1) {
         usage();

@@ -34,6 +34,7 @@
 #include "udp.h"
 #include "raw.h"
 #include "udp_compat.h"
+#include "webrtc.h"
 #include "openmax_render.h"
 #include "rgb_render.h"
 #include "openmax_audio.h"
@@ -80,6 +81,9 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_DECODER_TYPE dec_type
         break;
     case OPENUVR_NETWORK_UDP_COMPAT:
         ctx->net = &udp_compat_handler;
+        break;
+    case OPENUVR_NETWORK_WEBRTC:
+        ctx->net = &webrtc_handler;
         break;
     case OPENUVR_NETWORK_UDP:
     default:
