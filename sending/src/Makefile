@@ -29,9 +29,9 @@
 # Hung-Wei Tseng
 #
 
-CFLAGS=-std=c11 -fPIC -Wall -Wextra -D_GNU_SOURCE=1 -O3 -I$(shell pwd)/../ffmpeg_build -I$(shell pwd)/../ffmpeg_build/include -I/usr/include/python3.5m $(TIME_FLAGS)
+CFLAGS=-std=c11 -fPIC -Wall -Wextra -D_GNU_SOURCE=1 -O3 -I$(shell pwd)/../ffmpeg_build -I$(shell pwd)/../ffmpeg_build/include -I/usr/include/python3.5m $(TIME_FLAGS) $(shell pkg-config --cflags --libs gstreamer-1.0 gdk-pixbuf-2.0)
 
-OBJS=ouvr_packet.o tcp.o udp.o udp_compat.o raw.o raw_ring.o inject.o webrtc.o ffmpeg_encode.o rgb_encode.o openuvr.o openuvr_managed.o feedback_net.o input_recv.o
+OBJS=ouvr_packet.o tcp.o udp.o udp_compat.o raw.o raw_ring.o inject.o webrtc.o ffmpeg_encode.o gst_encode.o rgb_encode.o openuvr.o openuvr_managed.o feedback_net.o input_recv.o
 
 # required for pulse audio, but doesn't work with unity. TODO find a nice way to fix this so that we can uncomment it
 #OBJS+= pulse_audio.o
@@ -54,7 +54,7 @@ CFLAGS+= -DUE4DEBUG
 endif
 
 libopenuvr.so: $(OBJS)
-	gcc -shared -L../ffmpeg_build/lib/ -Wl,--no-as-needed -lavcodec -lavfilter -lavformat -lavutil -lswresample -lswscale -lavdevice -ldatachannel -o libopenuvr.so $(OBJS)
+	gcc -shared -L../ffmpeg_build/lib/ -Wl,--no-as-needed -lavcodec -lavfilter -lavformat -lavutil -lswresample -lswscale -lavdevice -ldatachannel $(shell pkg-config --cflags --libs gstreamer-1.0) -o libopenuvr.so $(OBJS) 
 	chmod -x libopenuvr.so
 
 FFMPEG_LIB_DIR=../ffmpeg_build/lib
@@ -68,6 +68,10 @@ libopenuvr.a: $(OBJS)
 # Optional program to send static content:
 openuvr: main.o libopenuvr.so
 	$(CC) $(CFLAGS) -o $@ main.o -lglut -lass -lSDL2-2.0 -lsndio -lasound -lvdpau -ldl -lva -lva-drm -lXext -lxcb-shm -lxcb-xfixes -lxcb-shape -lxcb -lXv -lfreetype -lpostproc -lva-x11 -lX11 -lpthread -lm -lz
+
+gst_example: gst_example.o
+	$(CC) $(CFLAGS) -o $@ gst_example.o $(shell pkg-config --cflags --libs gstreamer-1.0 gdk-pixbuf-2.0) -lglut -lass -lSDL2-2.0 -lsndio -lasound -lvdpau -ldl -lva -lva-drm -lXext -lxcb-shm -lxcb-xfixes -lxcb-shape -lxcb -lXv -lfreetype -lpostproc -lva-x11 -lX11 -lpthread -lm -lz
+
 
 .PHONY: install
 install: libopenuvr.so

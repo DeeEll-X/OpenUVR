@@ -41,6 +41,7 @@
 #include "webrtc.h"
 #include "inject.h"
 #include "ffmpeg_encode.h"
+#include "gst_encode.h"
 #include "rgb_encode.h"
 #include "pulse_audio.h"
 #include "feedback_net.h"
@@ -107,7 +108,8 @@ struct openuvr_context *openuvr_alloc_context(enum OPENUVR_ENCODER_TYPE enc_type
         break;
     case OPENUVR_ENCODER_H264:
     default:
-        ctx->enc = &ffmpeg_encode;
+        ctx->enc = &gst_encode;
+        // ctx->enc = &ffmpeg_encode;
     }
     if (ctx->enc->init(ctx) != 0)
     {

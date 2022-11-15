@@ -43,7 +43,7 @@
 
 void usage()
 {
-    printf("Usage: sudo ./openuvr [h264 | rgb] [tcp | udp | udp-compat | raw]\n");
+    printf("Usage: sudo ./openuvr [h264 | rgb] [tcp | udp | udp-compat | raw | webrtc]\n");
 }
 
 int main(int argc, char **argv)
@@ -52,15 +52,15 @@ int main(int argc, char **argv)
     enum OPENUVR_NETWORK_TYPE net_choice = -1;
     enum OPENUVR_ENCODER_TYPE enc_choice = -1;
 
-    __uid_t uid = getuid();
-    if (uid != 0)
-    {
-        printf("Error: program must be run as root.\n");
-        usage();
-        return 1;
-    }
+    // __uid_t uid = getuid();
+    // if (uid != 0)
+    // {
+    //     printf("Error: program must be run as root.\n");
+    //     usage();
+    //     return 1;
+    // }
 
-    if (argc > 3)
+    if (argc != 3)
     {
         usage();
         return 1;
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     void *handle = dlopen("libopenuvr.so", RTLD_LAZY);
     if (handle == NULL)
     {
-        printf("null\n");
+        printf("null, error: %s\n", dlerror());
         exit(1);
     }
     struct openuvr_context *(*openuvr_alloc)(enum OPENUVR_ENCODER_TYPE, enum OPENUVR_NETWORK_TYPE, uint8_t *, unsigned int);

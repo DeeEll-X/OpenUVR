@@ -123,7 +123,7 @@ static int webrtc_initialize(struct ouvr_ctx *ctx)
 static int webrtc_send_packet(struct ouvr_ctx * ctx, struct ouvr_packet *pkt)
 {
 	if(peer.pc && peer.state == RTC_CONNECTED){
-		rtcSendMessage(peer.pc, pkt->data, pkt->size);
+		rtcSendMessage(peer.tr, pkt->data, pkt->size);
 	}
     return 0;
 }
@@ -201,25 +201,13 @@ static void RTC_API wbServerClientCallbackFunc(int wsserver, int ws, void *ptr)
 		96,
 		ssrc,
 		"video",
-		NULL,
+		"video-send",
 		NULL,
 		NULL,
 	};
 	peer.tr = rtcAddTrackEx(peer.pc, &trackInit);
 	rtcSetUserPointer(peer.tr, &peer);
 	rtcSetClosedCallback(peer.tr, trClosedCallback);
-
-	rtcPacketizationHandlerInit packetizationHandlerInit = {
-		ssrc,
-		"video-stream",
-		96,
-		90000,
-		1,
-		1,
-		RTC_NAL_SEPARATOR_LENGTH,
-		1220,
-	};
-	rtcSetH264PacketizationHandler(peer.tr, &packetizationHandlerInit);
 
 	rtcSetLocalDescription(peer.pc, "offer");
 
